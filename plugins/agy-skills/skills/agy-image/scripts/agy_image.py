@@ -160,11 +160,25 @@ def main():
         sys.stderr.write("agy did not return JSON.\n--- stdout ---\n" + proc.stdout[-3000:] + "\n--- stderr ---\n" + proc.stderr[-3000:] + "\n")
         sys.exit(2)
 
-    if data.get("status") != "SUCCESS":
-        sys.stderr.write("agy reported failure:\n" + json.dumps(data, ensure_ascii=False, indent=2)[-3000:] + "\n")
-        sys.exit(3)
-
     response = data.get("response", "")
+    if data.get("status") != "SUCCESS":
+        # agy sometimes fails on the final agent turn (e.g. 503 capacity on the reasoning model)
+        # after generate_image already wrote the file. Try to salvage it before giving up.
+        sys.stderr.write(f"warning: agy status={data.get('status')} error={data.get('error')}; checking for a generated file anyway\n")
+        salvaged = False
+        m0 = re.search(r"((?:/|[A-Za-z]:\\)[^\s\)\]\"'>]+?\.(?:jpe?g|png|webp))", response)
+        if m0 and os.path.exists(m0.group(1)):
+            salvaged = True
+        else:
+            cid = data.get("conversation_id", "")
+            for ext in ("jpg", "jpeg", "png", "webp"):
+                if any(os.path.getmtime(c) >= t0 - 5 for c in glob.glob(os.path.join(BRAIN_DIR, cid, f"*.{ext}"))):
+                    salvaged = True
+                    break
+        if not salvaged:
+            sys.stderr.write("agy reported failure:\n" + json.dumps(data, ensure_ascii=False, indent=2)[-3000:] + "\n")
+            sys.exit(3)
+
     m = re.search(r"((?:/|[A-Za-z]:\\)[^\s\)\]\"'>]+?\.(?:jpe?g|png|webp))", response)
     src = m.group(1) if m else None
 
