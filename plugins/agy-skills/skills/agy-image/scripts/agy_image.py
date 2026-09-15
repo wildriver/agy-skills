@@ -44,6 +44,23 @@ def find_agy():
     sys.exit("agy not found. Install Antigravity CLI, add it to PATH, or set AGY_BIN=/path/to/agy.")
 
 
+BLACK_WORDS = ("neon", "glow", "glowing", "luminous", "light trail", "light-trail", "holographic", "laser",
+               "bioluminescent", "light painting", "on black", "black background")
+WHITE_WORDS = ("ink", "pencil", "sketch", "line drawing", "monochrome drawing", "charcoal", "pen drawing",
+               "on white", "white background", "blueprint")
+
+
+def pick_transparent_mode(prompt):
+    """Heuristic for --transparent auto. Glow-type art keys best from black, dark ink from white,
+    anything full-color from a magenta chroma key."""
+    p = prompt.lower()
+    if any(w in p for w in BLACK_WORDS):
+        return "black"
+    if any(w in p for w in WHITE_WORDS):
+        return "white"
+    return "chroma"
+
+
 def image_name_from(out_path):
     stem = os.path.splitext(os.path.basename(out_path))[0].lower()
     words = re.findall(r"[a-z0-9]+", stem)
@@ -83,13 +100,19 @@ def main():
     ap.add_argument("--name", help="ImageName for the tool (lowercase_with_underscores, max 3 words). Derived from --out if omitted.")
     ap.add_argument("--timeout", type=int, default=6, help="Minutes to wait (default 6)")
     ap.add_argument("--model", help="agy model id, e.g. gemini-3.8-flash-high (optional)")
-    ap.add_argument("--transparent", choices=["black", "white", "chroma"],
-                    help="Produce a transparent PNG: generate on a flat background and key it out. "
-                         "black = glow/neon/light line art (alpha from brightness); "
-                         "white = dark ink drawings (alpha from darkness); "
-                         "chroma = full-color subjects on magenta (color-key + despill).")
-    ap.add_argument("--trim", action="store_true", help="With --transparent: crop to the opaque bounding box (+8px)")
+    ap.add_argument("--transparent", default="auto", choices=["auto", "black", "white", "chroma", "none"],
+                    help="Transparent-PNG mode (default auto). auto picks from the prompt: neon/glow words -> black, "
+                         "ink/sketch words -> white, otherwise chroma. black = alpha from brightness (glow/light line art); "
+                         "white = alpha from darkness (dark ink drawings); chroma = magenta color-key (full-color subjects); "
+                         "none = keep the generated background (opaque JPEG).")
+    ap.add_argument("--trim", dest="trim", action="store_true", default=True,
+                    help="Crop transparent output to the opaque bounding box (+8px). Default on.")
+    ap.add_argument("--no-trim", dest="trim", action="store_false", help="Keep the full frame.")
     args = ap.parse_args()
+    if args.transparent == "auto":
+        args.transparent = pick_transparent_mode(args.prompt)
+    if args.transparent == "none":
+        args.transparent = None
 
     if len(args.ref) > 3:
         sys.exit("generate_image accepts at most 3 reference images.")

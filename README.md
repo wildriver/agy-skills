@@ -4,7 +4,7 @@ Claude Code から Google **Antigravity CLI(`agy`)** を使うためのスキル
 
 | スキル | 何をするか |
 |---|---|
-| `agy-image` | agy の `generate_image`(Gemini の画像生成、Nano Banana 系)で画像を生成・編集し、指定パスに保存する。`--transparent` で背景透過 PNG も作れる |
+| `agy-image` | agy の `generate_image`(Gemini の画像生成、Nano Banana 系)で画像を生成・編集し、指定パスに保存する。既定で背景透過 PNG |
 | `agy-review` | 原稿を Gemini(既定 `gemini-3.8-flash-high`)に渡し、推敲・校正・批評・セカンドオピニオンをテキストで受け取る |
 
 どちらも API キー不要で、ローカルにログイン済みの agy とそのクォータで動きます。ファイルを勝手に編集することはありません。
@@ -57,15 +57,20 @@ ln -s "$PWD/agy-skills/plugins/agy-skills/skills/agy-review" ~/.claude/skills/
 スクリプトを直接叩くこともできます。
 
 ```bash
-# 画像生成(アスペクト比は 1:1 2:3 3:2 3:4 4:3 9:16 16:9)
+# 画像生成。既定で背景透過 PNG(被写体で切り抜き)になる。アスペクト比は 1:1 2:3 3:2 3:4 4:3 9:16 16:9
 python3 plugins/agy-skills/skills/agy-image/scripts/agy_image.py \
-  "Clean flat vector illustration of a capacitive touch sensor cross-section, white background, no text" \
-  --out images/sensor.jpg --aspect 16:9
+  "Clean flat vector illustration of a capacitive touch sensor cross-section, no text" \
+  --out images/sensor.png --aspect 16:9
 
-# 背景透明の PNG(ネオン/線画は black、フルカラーは chroma、黒インク画は white)
+# 抜き方はプロンプトから自動選択(neon/glow → black、ink/sketch → white、他は chroma)。明示も可
 python3 plugins/agy-skills/skills/agy-image/scripts/agy_image.py \
   "Neon line-art smartphone with a glowing scroll trajectory, no text" \
-  --out images/phone_neon.png --aspect 1:1 --transparent black --trim
+  --out images/phone_neon.png --aspect 1:1 --transparent black
+
+# 背景込みの一枚絵が欲しいとき(スライド全面の背景など)
+python3 plugins/agy-skills/skills/agy-image/scripts/agy_image.py \
+  "Dark navy abstract background with faint constellation lines" \
+  --out images/bg.jpg --aspect 16:9 --transparent none
 
 # 既存画像を編集(参照は最大 3 枚)
 python3 plugins/agy-skills/skills/agy-image/scripts/agy_image.py \
@@ -90,8 +95,8 @@ python3 plugins/agy-skills/skills/agy-review/scripts/agy_review.py abstract.md -
 - 生成画像の原本は `~/.gemini/antigravity-cli/brain/<会話ID>/` に残り、スクリプトはそこから `--out` にコピーします。場所が違う環境では `AGY_BRAIN_DIR` で上書きできます。
 - `agy` が PATH に無いときは `~/.local/bin/agy` などを探します。見つからなければ `AGY_BIN=/path/to/agy` を設定してください。
 - 「no text」と書いても英語ラベルが入ることがあります。強めに否定するか、`--ref` で「remove all text」と差分編集してください。
-- `--transparent black|white|chroma` を付けると単色背景で生成し、手元で背景を抜いて透過 PNG にします(agy 自体はアルファを返せません)。Pillow は任意で、無ければ macOS の `sips` と標準ライブラリで処理します。Linux で Pillow が無い場合はこの機能だけ使えません。
-- `--out` の拡張子は生成物に合わせて置き換わります(agy は JPEG を返すため `.png` を指定しても `.jpg` になります)。
+- 既定で単色背景で生成し、手元で背景を抜いて透過 PNG にします(agy 自体はアルファを返せません)。`--transparent auto|black|white|chroma|none` で抜き方を選べ、`none` で背景込みの JPEG になります。切り抜きは `--no-trim` で無効化できます。Pillow は任意で、無ければ macOS の `sips` と標準ライブラリで処理します。Linux で Pillow が無い場合はこの機能だけ使えません。
+- `--transparent none` のときは `--out` の拡張子が生成物に合わせて `.jpg` になります。透過モードでは常に `.png` です。
 - 所要時間の目安: 画像 1 枚 30〜70 秒、推敲は数千字で 20〜50 秒。
 
 ## リポジトリ構成
