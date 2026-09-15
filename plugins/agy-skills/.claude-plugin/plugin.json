@@ -1,0 +1,10 @@
+{
+  "name": "agy-skills",
+  "version": "0.1.0",
+  "description": "Claude Code skills that drive Google's Antigravity CLI (agy): image generation/editing with generate_image (Nano Banana) and Gemini-powered proofreading / critique of drafts.",
+  "author": { "name": "wildriver", "url": "https://github.com/wildriver" },
+  "homepage": "https://github.com/wildriver/agy-skills",
+  "repository": "https://github.com/wildriver/agy-skills",
+  "license": "MIT",
+  "keywords": ["antigravity", "agy", "gemini", "nano-banana", "image-generation", "proofreading", "japanese"]
+}

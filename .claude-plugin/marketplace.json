@@ -1,0 +1,19 @@
+{
+  "name": "agy-skills",
+  "owner": { "name": "wildriver", "url": "https://github.com/wildriver" },
+  "metadata": {
+    "description": "Skills for using Google's Antigravity CLI (agy) from Claude Code: Gemini image generation and text review.",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "agy-skills",
+      "source": "./plugins/agy-skills",
+      "description": "agy-image (Gemini / Nano Banana image generation & editing) and agy-review (Gemini proofreading, critique, second opinion).",
+      "version": "0.1.0",
+      "author": { "name": "wildriver" },
+      "category": "productivity",
+      "keywords": ["antigravity", "agy", "gemini", "nano-banana", "image", "proofreading"]
+    }
+  ]
+}
