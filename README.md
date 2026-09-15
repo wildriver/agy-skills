@@ -81,6 +81,7 @@ python3 plugins/agy-skills/skills/agy-review/scripts/agy_review.py abstract.md -
 - 生成画像の原本は `~/.gemini/antigravity-cli/brain/<会話ID>/` に残り、スクリプトはそこから `--out` にコピーします。場所が違う環境では `AGY_BRAIN_DIR` で上書きできます。
 - `agy` が PATH に無いときは `~/.local/bin/agy` などを探します。見つからなければ `AGY_BIN=/path/to/agy` を設定してください。
 - 「no text」と書いても英語ラベルが入ることがあります。強めに否定するか、`--ref` で「remove all text」と差分編集してください。
+- `--out` の拡張子は生成物に合わせて置き換わります(agy は JPEG を返すため `.png` を指定しても `.jpg` になります)。
 - 所要時間の目安: 画像 1 枚 30〜70 秒、推敲は数千字で 20〜50 秒。
 
 ## リポジトリ構成
