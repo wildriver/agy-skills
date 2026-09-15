@@ -5,7 +5,8 @@ Modes (choose the one matching how the image was generated):
   black   image drawn on pure black: alpha = brightness. Ideal for neon / glow / light line art.
           Compositing the result over any background reproduces an additive ("screen") glow.
   white   image drawn on pure white: alpha = darkness. For dark ink / line drawings.
-  chroma  image drawn on flat magenta (#FF00FF): alpha = distance from the key color, with despill.
+  chroma  image drawn on a flat magenta background: alpha = distance from the background color
+          (measured from the image border, not assumed to be #FF00FF), with despill.
           For full-color subjects (photos, colored flat illustrations).
 
 Decoding: Pillow if available; otherwise macOS `sips` converts to PNG and a small pure-Python
@@ -147,11 +148,26 @@ def save_rgba_png(path, w, h, rgba):
 
 # ---------- alpha extraction ----------
 
+def border_color(w, h, rgb, step=4):
+    """Median color of the outermost pixels. The generator's "flat magenta" is never exactly #FF00FF
+    (e.g. RGB(248, 63, 231)), so the key color must be measured, not assumed."""
+    samples = []
+    for x in range(0, w, step):
+        for y in (0, h - 1):
+            i = (y * w + x) * 3; samples.append(rgb[i:i + 3])
+    for y in range(0, h, step):
+        for x in (0, w - 1):
+            i = (y * w + x) * 3; samples.append(rgb[i:i + 3])
+    med = lambda k: sorted(p[k] for p in samples)[len(samples) // 2]
+    return (med(0), med(1), med(2))
+
+
 def to_rgba(w, h, rgb, mode, gamma=1.0, low=0, high=255, floor=16):
     """Build RGBA. low/high: alpha ramp endpoints (values below low -> 0, above high -> 255).
     floor: alpha values below this become 0, which removes JPEG speckle on the flat background."""
     n = w * h
     rgba = bytearray(n * 4)
+    key = border_color(w, h, rgb) if mode == "chroma" else KEY
     span = max(1, high - low)
     lut = bytearray(256)
     for v in range(256):
@@ -175,8 +191,8 @@ def to_rgba(w, h, rgb, mode, gamma=1.0, low=0, high=255, floor=16):
                 g = max(0, 255 - int((255 - g) * s))
                 b = max(0, 255 - int((255 - b) * s))
         else:  # chroma (magenta)
-            d = ((r - KEY[0]) ** 2 + (g - KEY[1]) ** 2 + (b - KEY[2]) ** 2) ** 0.5  # 0..~441
-            a = lut[min(255, int(d * 255 / 441))]
+            d = ((r - key[0]) ** 2 + (g - key[1]) ** 2 + (b - key[2]) ** 2) ** 0.5  # 0..~441
+            a = lut[min(255, int(d))]
             if 0 < a < 255:
                 # despill: pull magenta out of edge pixels
                 m = min(r, b)
@@ -217,7 +233,8 @@ def crop(w, h, rgba, box, pad=0):
 def make_transparent(src, dst, mode="black", trim=False, pad=8, low=None, high=None, gamma=1.0):
     if mode not in MODES:
         raise ValueError(f"mode must be one of {MODES}")
-    defaults = {"black": (6, 235), "white": (6, 235), "chroma": (30, 110)}
+    # chroma thresholds are distances from the measured border color; JPEG noise there stays under ~15
+    defaults = {"black": (6, 235), "white": (6, 235), "chroma": (28, 100)}
     lo, hi = defaults[mode]
     if low is not None: lo = low
     if high is not None: hi = high
