@@ -74,6 +74,10 @@ python3 plugins/agy-skills/skills/agy-review/scripts/agy_review.py draft.md --mo
 python3 plugins/agy-skills/skills/agy-review/scripts/agy_review.py abstract.md --mode custom --instructions "Act as a CHI reviewer..."
 ```
 
+## 動く環境・動かない環境
+
+スクリプトはローカルの `agy` を起動するため、**シェルが使える Claude Code(ターミナル、または Claude Desktop の Code タブ)でのみ動きます**。Claude Desktop の PowerPoint / Word 連携や Cowork のようなサンドボックスでは `agy` が無く外部通信もできないため実行できません。その場合は Claude Code で画像を生成・原稿を推敲し、生成物のファイルパスをサンドボックス側の Claude に渡して配置してもらう二段階の運用になります。SKILL.md にはこの状況で代替物を勝手に作らずユーザーへ案内するよう書いてあります。
+
 ## 挙動と制限
 
 - agy はヘッドレス(`-p`)モードだとファイル読み取り権限を自動拒否します。そのため `agy-review` は本文をプロンプトに埋め込み、`agy-image` の参照画像は `generate_image` の `ImagePaths` で渡します。`--dangerously-skip-permissions` は使いません。

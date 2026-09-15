@@ -58,6 +58,10 @@ python3 ${CLAUDE_SKILL_DIR}/scripts/agy_review.py draft.md --mode critique --out
 python3 ${CLAUDE_SKILL_DIR}/scripts/agy_review.py draft.md --mode critique --model claude-opus-4-6-thinking --out review-opus.md
 ```
 
+## この環境で agy が動かないとき
+
+このスキルはローカルにインストールされた agy を Python から起動する。Claude Desktop の PowerPoint / Word 連携や Cowork のようなサンドボックス環境では、`agy` コマンドが存在せず外部通信も遮断されているため実行できない。その場合は、自分で推敲して「Gemini の意見」を装わないこと。「この環境からは agy を起動できない」と伝え、Claude Code で同じファイルを対象に依頼すれば実行できると案内する。自分自身の推敲を提供するのは構わないが、それが Gemini ではなく自分の意見であることを明示する。
+
 ## 知っておくべき挙動
 
 - `agy models` で使えるモデル一覧が出る。既定は `gemini-3.8-flash-high`(ユーザーの指定。文章の構成を見る用途ではこれを使う)。他候補は `gemini-3.1-pro-high`、`claude-opus-4-6-thinking` など。
