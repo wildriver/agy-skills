@@ -83,6 +83,12 @@ def main():
     ap.add_argument("--name", help="ImageName for the tool (lowercase_with_underscores, max 3 words). Derived from --out if omitted.")
     ap.add_argument("--timeout", type=int, default=6, help="Minutes to wait (default 6)")
     ap.add_argument("--model", help="agy model id, e.g. gemini-3.8-flash-high (optional)")
+    ap.add_argument("--transparent", choices=["black", "white", "chroma"],
+                    help="Produce a transparent PNG: generate on a flat background and key it out. "
+                         "black = glow/neon/light line art (alpha from brightness); "
+                         "white = dark ink drawings (alpha from darkness); "
+                         "chroma = full-color subjects on magenta (color-key + despill).")
+    ap.add_argument("--trim", action="store_true", help="With --transparent: crop to the opaque bounding box (+8px)")
     args = ap.parse_args()
 
     if len(args.ref) > 3:
@@ -98,9 +104,15 @@ def main():
     out_path = os.path.abspath(os.path.expanduser(args.out))
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
 
+    bg_suffix = {
+        "black": " Rendered on a perfectly uniform pure black background (#000000), no gradient, no vignette, no stars or dots, no ground shadow.",
+        "white": " Rendered on a perfectly uniform pure white background (#FFFFFF), no gradient, no vignette, no paper texture, no ground shadow.",
+        "chroma": " Rendered on a perfectly uniform flat magenta background (#FF00FF, chroma key), no gradient, no shadow on the background, subject fully inside the frame with clear margins.",
+    }
+    prompt_text = args.prompt + (bg_suffix[args.transparent] if args.transparent else "")
     lines = [
         "Call the generate_image tool exactly once with these parameters and do nothing else.",
-        f"Prompt (pass it verbatim, do not rewrite or embellish it): {args.prompt}",
+        f"Prompt (pass it verbatim, do not rewrite or embellish it): {prompt_text}",
         f"ImageName: {name}",
         f"AspectRatio: {args.aspect}",
     ]
@@ -146,14 +158,26 @@ def main():
         sys.stderr.write("Could not locate generated image. agy response was:\n" + response + "\n")
         sys.exit(4)
 
-    # Keep the source extension if --out has none or differs (we do not transcode).
     src_ext = os.path.splitext(src)[1].lower()
-    if os.path.splitext(out_path)[1].lower() != src_ext:
-        out_path = os.path.splitext(out_path)[0] + src_ext
-    shutil.copy2(src, out_path)
-    w, h = image_dims(out_path)
-    print(json.dumps({"out": out_path, "source": src, "width": w, "height": h,
-                      "seconds": elapsed, "aspect": args.aspect, "refs": refs}, ensure_ascii=False))
+    result = {"source": src, "seconds": elapsed, "aspect": args.aspect, "refs": refs}
+    if args.transparent:
+        # Keep the flat original next to the PNG (useful for --ref re-edits), then key it out.
+        stem = os.path.splitext(out_path)[0]
+        flat_path = stem + "_flat" + src_ext
+        shutil.copy2(src, flat_path)
+        out_path = stem + ".png"
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        from alpha import make_transparent  # noqa: E402
+        w, h = make_transparent(flat_path, out_path, mode=args.transparent, trim=args.trim)
+        result.update({"out": out_path, "flat": flat_path, "width": w, "height": h, "transparent": args.transparent})
+    else:
+        # Keep the source extension if --out has none or differs (we do not transcode).
+        if os.path.splitext(out_path)[1].lower() != src_ext:
+            out_path = os.path.splitext(out_path)[0] + src_ext
+        shutil.copy2(src, out_path)
+        w, h = image_dims(out_path)
+        result.update({"out": out_path, "width": w, "height": h})
+    print(json.dumps(result, ensure_ascii=False))
 
 
 if __name__ == "__main__":
