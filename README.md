@@ -351,3 +351,6 @@ Then just ask, e.g. "Make a 16:9 illustration of a hand using a smartphone for m
 MIT License ・ README のイラストはすべて agy-image で生成しています
 
 </div>
+
+
+[![Support me on Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/rkwytk)
